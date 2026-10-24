@@ -26,12 +26,14 @@ FLOOR="anoisesrc=c=brown:a=0.25:seed=$((SEED+7)),lowpass=f=300"
 printf '%s' "$HOOK" > "$WORK/hook.txt"
 printf '%s' "Full 3 hours on @DesertNightSounds" > "$WORK/cta.txt"
 
+# Shrink the hook font for longer text so it always fits the 1080 px width.
+LEN=${#HOOK}; HS=$(( 1550 / (LEN>0?LEN:1) )); [ "$HS" -gt 78 ] && HS=78
 FPS=30; FRAMES=$((DUR*FPS))
 # Photo: fill the 9:16 frame, then a slow, steady zoom for gentle motion.
 VF="scale=2160:3840:force_original_aspect_ratio=increase,crop=2160:3840,\
 zoompan=z='1+0.12*on/${FRAMES}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${FRAMES}:s=1080x1920:fps=${FPS},\
 drawbox=x=0:y=200:w=iw:h=330:color=black@0.35:t=fill,\
-drawtext=fontfile=${FONT}:textfile=${WORK}/hook.txt:fontsize=78:fontcolor=white:borderw=4:bordercolor=black@0.6:x=(w-text_w)/2:y=320,\
+drawtext=fontfile=${FONT}:textfile=${WORK}/hook.txt:fontsize=${HS}:fontcolor=white:borderw=4:bordercolor=black@0.6:x=(w-text_w)/2:y=320,\
 drawtext=fontfile=${FONT}:textfile=${WORK}/cta.txt:fontsize=48:fontcolor=white:borderw=3:bordercolor=black@0.6:x=(w-text_w)/2:y=h-360:alpha='if(lt(t,3),0,min(1,(t-3)/1.5))',\
 fade=t=in:st=0:d=1,format=yuv420p"
 
