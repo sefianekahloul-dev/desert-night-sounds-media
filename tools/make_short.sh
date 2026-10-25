@@ -22,19 +22,36 @@ case "$STYLE" in
 esac
 FLOOR="anoisesrc=c=brown:a=0.25:seed=$((SEED+7)),lowpass=f=300"
 
-# Text goes through files so quotes and colons in the hook are safe.
-printf '%s' "$HOOK" > "$WORK/hook.txt"
-printf '%s' "Full 3 hours on @DesertNightSounds" > "$WORK/cta.txt"
-
-# Shrink the hook font for longer text so it always fits the 1080 px width.
-LEN=${#HOOK}; HS=$(( 1550 / (LEN>0?LEN:1) )); [ "$HS" -gt 78 ] && HS=78
+# Shorts safe zone (1080x1920): YouTube covers roughly the top 260 px (status bar, search),
+# the bottom 640 px (channel name, caption, comment box, nav bar) and the right 150 px
+# (like/comment/share buttons). All text stays inside x 90-930, y 520-1000, with no boxes behind it.
+TFONT=/usr/share/fonts/truetype/google-fonts/Lora-Variable.ttf
+[ -f "$TFONT" ] || TFONT="$FONT"
+# Split the hook into at most two balanced lines (text goes through files so quotes and colons are safe).
+python3 - "$HOOK" "$WORK" <<'PY'
+import sys
+hook, work = sys.argv[1], sys.argv[2]
+w = hook.split()
+if len(hook) <= 16 or len(w) < 2:
+    lines = [hook]
+else:
+    best = min(range(1, len(w)), key=lambda i: abs(len(" ".join(w[:i])) - len(" ".join(w[i:]))))
+    lines = [" ".join(w[:best]), " ".join(w[best:])]
+for n in range(2):
+    open(f"{work}/l{n}.txt", "w").write(lines[n] if n < len(lines) else "")
+longest = max(len(l) for l in lines)
+open(f"{work}/size.txt", "w").write(str(min(84, int(1500 / max(longest, 1)))))
+PY
+HS=$(cat "$WORK/size.txt")
+printf '%s' "3-hour version on the channel" > "$WORK/cta.txt"
 FPS=30; FRAMES=$((DUR*FPS))
+SH="shadowcolor=black@0.55:shadowx=0:shadowy=3"
 # Photo: fill the 9:16 frame, then a slow, steady zoom for gentle motion.
 VF="scale=2160:3840:force_original_aspect_ratio=increase,crop=2160:3840,\
 zoompan=z='1+0.12*on/${FRAMES}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=${FRAMES}:s=1080x1920:fps=${FPS},\
-drawbox=x=0:y=200:w=iw:h=330:color=black@0.35:t=fill,\
-drawtext=fontfile=${FONT}:textfile=${WORK}/hook.txt:fontsize=${HS}:fontcolor=white:borderw=4:bordercolor=black@0.6:x=(w-text_w)/2:y=320,\
-drawtext=fontfile=${FONT}:textfile=${WORK}/cta.txt:fontsize=48:fontcolor=white:borderw=3:bordercolor=black@0.6:x=(w-text_w)/2:y=h-360:alpha='if(lt(t,3),0,min(1,(t-3)/1.5))',\
+drawtext=fontfile=${TFONT}:textfile=${WORK}/l0.txt:fontsize=${HS}:fontcolor=white:${SH}:x=(w-text_w)/2:y=560,\
+drawtext=fontfile=${TFONT}:textfile=${WORK}/l1.txt:fontsize=${HS}:fontcolor=white:${SH}:x=(w-text_w)/2:y=560+${HS}*1.3,\
+drawtext=fontfile=${TFONT}:textfile=${WORK}/cta.txt:fontsize=40:fontcolor=white@0.85:${SH}:x=(w-text_w)/2:y=600+${HS}*2.6:alpha='if(lt(t,3),0,min(1,(t-3)/1.5))',\
 fade=t=in:st=0:d=1,format=yuv420p"
 
 ffmpeg -hide_banner -loglevel error -y \
